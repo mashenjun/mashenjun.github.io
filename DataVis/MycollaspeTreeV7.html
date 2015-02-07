@@ -185,7 +185,7 @@
         })
         .on("brush", function() {
           var extent = d3.event.target.extent();
-          vis.selectAll("circle").style("stroke", function(d) {
+          vis.selectAll(".Snode").style("stroke", function(d) {
 
             d.selected = d.previouslySelected ^
                 (extent[0][0] <= d.y && d.y < extent[1][0]
@@ -242,7 +242,7 @@
         })
         .on("brush", function() {
           var extent = d3.event.target.extent();
-          vis.selectAll("circle").style("stroke", function(d) {
+          vis.selectAll(".Snode").style("stroke", function(d) {
             d.selected = d.previouslySelected ^
                 (extent[0][0] <= d.y && d.y < extent[1][0]
                 && extent[0][1] <= d.x && d.x < extent[1][1]);
@@ -468,6 +468,7 @@
 
 		  nodeUpdate.select("circle")
 		      .attr("r", 4.5)
+		      .attr("class","Snode")
 		      .style("stroke",function(d) {return colour1(d.Name);})
 		      .style("fill", function(d) { return d._children ? colour1(d.Name) : "#fff"; });
 
