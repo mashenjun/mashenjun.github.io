@@ -347,17 +347,22 @@
 			}
 		});
 
-	console.log(attrnodes);
+	console.log(attrlinks);
 	console.log("k="+k)
-; 	attrnodes.forEach(function (d,i){
+ 	attrnodes.forEach(function (d,i){
       if (d.nodename) {
       	d.fixed = true;       
         d.y = (i+1-num)<=k/2?h/3:2*h/3;
         d.x = ((i+1-num)<=k/2?(i+1-num)*(w/(k/2+1)):(i+1-num-k/2)*(w/(k/2+1)))-100;  
-        console.log(i+1-num);
+        console.log(d.y);
         num=num+d.attrnum;
     	}
   });   
+
+ 	attrlinks.forEach(function (d,i){
+ 		attrnodes[d.source].x=attrnodes[d.target].x;
+ 		attrnodes[d.source].y=attrnodes[d.target].y+10;
+ 	});
 
 	 	  force
 	      .nodes(attrnodes)
