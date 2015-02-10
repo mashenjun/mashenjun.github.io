@@ -1,0 +1,465 @@
+<!DOCTYPE html>  
+<meta http-equiv="content-type" content="text/html" charset="utf-8">
+<html>  
+  <head> 
+      <title>XML-Visualization.html</title>  
+      <script type="text/javascript" src=JS/d3.min.js></script>  
+        <link rel="stylesheet" href="CSS/bootstrap.min.css" type="text/css" />
+  <script type="text/javascript" src=bootstrap/js/jquery-1.11.2.min.js></script>
+  <script type="text/javascript" src=bootstrap/js/bootstrap.min.js></script>
+          <style type="text/css">
+
+text {
+  font-size: 11px;
+  pointer-events: none;
+}
+
+text.parent {
+  fill: #1f77b4;
+}
+
+circle {
+  fill: #ccc;
+  stroke: #999;
+  pointer-events: all;
+}
+
+circle.parent {
+  fill: #1f77b4;
+  fill-opacity: .1;
+  stroke: steelblue;
+}
+
+circle.parent:hover {
+  stroke: #ff7f0e;
+  stroke-width: .5px;
+}
+
+circle.child {
+  pointer-events: none;
+}
+
+    </style>
+
+  </head>
+  <body>
+        <h2>
+      Instuctors of Courses<br>
+      circle packing
+    </h2>
+    <div class= "btn-group" style="top:-780px;left:10px;">
+  <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
+  show relationship  <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu">
+    <li><a href="#" onclick="showinstructor()">instructor---course</a></li>
+    <li><a href="#" onclick="showsubject()">subject---course</a></li>
+    <li><a href="#" onclick="showday()">day---course</a></li>
+  </ul>
+</div>
+    <script>
+
+    var dataset;
+    var courseName = []; 
+    var Instructor = [];
+    var subject = [];
+    var day= [];
+
+    var w = 1280,
+        h = 800,
+        ran = 720,
+        x = d3.scale.linear().range([0, ran]),
+        y = d3.scale.linear().range([0, ran]);
+
+
+    var canvas = d3.select("body").append("svg")
+          .attr("width",w)
+          .attr("height",h)
+          .append("g")
+              .attr("transform","translate(" + (w - ran) / 2 + "," + (h - ran) / 2 + ")");
+
+    var pack = d3.layout.pack()
+          .size([ran,ran])
+          .padding(10);
+          //.value(function(d) { return d.size; });
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+d3.xml("reed.xml", function(error, data) {
+            if (error) { return console.warn(error); }
+
+      // console.log(nodes);
+
+      dataset = xmlToJSON2(data); 
+      //var mark = [];
+      //console.log(dataset.children[0])
+
+      dataset.children[0].children.forEach(function(course){ 
+      //children[0] is root
+  
+              if ((typeof(course.children[6].textContent) !== "undefined")&&(course.children[6].tagName === "instructor") ){ 
+
+              Instructor.push(course.children[6].textContent);
+              courseName.push(course.children[4].textContent);
+              subject.push(course.children[1].textContent);
+              day.push(course.children[7].textContent);
+              }    
+      });//end of loop
+
+    var root = {};
+    var root2 = {"children":[],"value":100};
+    var temp =0;
+    var namelistt=[];
+    for (var i=0;i<courseName.length;i++ ) {
+
+        if ((Instructor[i] in root)==false){ 
+            namelistt.push(Instructor[i]);        
+            root[Instructor[i]]=[];
+            temp=temp+1;
+        }
+
+        root[Instructor[i]].push(courseName[i]);
+    }
+
+
+    for (var i=0; i<namelistt.length;i++){
+      var temp2={};
+      temp2["name"]=namelistt[i];
+      temp2["value"]=50;
+      temp2["children"]=[];
+        for (var j=0;j< root[namelistt[i]].length;j++) {
+          temp2["children"].push({"name":root[namelistt[i]][j],"value":25});
+        }
+      root2.children.push(temp2);
+    }
+
+     //console.log(root2);
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+      //d3.json("mydata2.json",function (data){
+
+          var data = root2;
+
+          var nodes = pack.nodes(data);
+
+          var node = canvas.selectAll(".node")
+              .data(nodes)
+              .enter()
+              .append("g")
+
+
+
+
+          node.append("svg:circle")
+              .attr("class", function(d) { return d.children ? "parent" : "child"; })
+              .attr("cx", function(d) { return d.x; })
+              .attr("cy", function(d) { return d.y; })
+              .attr("r",function (d) { return d.r ;})
+              // .attr("fill",function (d) {  return d.children ? "#000" : "steelblue";})
+              .attr("opacity",0.25)
+              // .attr("stroke",function (d) { return d.children ? "#000" : "#ADADAD";})
+              .attr("stroke-width",2)
+              .on("click", function(d) { return zoom(data == d ? data : d); });
+
+          node.append("svg:text")
+              .attr("class", function(d) { return d.children ? "parent" : "child"; })
+              .attr("x", function(d) { return d.x; })
+              .attr("y", function(d) { return d.y; })
+              .attr("dy", ".35em")
+              .text(function (d) { return d.name;})
+              .style("opacity", function(d) { return d.r > 30 ? 1 : 0; })
+              .attr("text-anchor", "middle")
+              .style("font-size", function(d){return d.children? "15px":"11px";});
+              // .attr("fill",function (d) { return d.children ?  "steelblue" : "#000";});
+
+
+
+            
+            d3.select(canvas).on("click", function() { zoom(data); });
+
+      // }) //fake read jason
+
+});//end of xml reading
+
+
+
+function zoom(d) {
+  var k = ran / d.r / 2;
+  x.domain([d.x - d.r, d.x + d.r]);
+  y.domain([d.y - d.r, d.y + d.r]);
+
+  var t = canvas.transition()
+      .duration(d3.event.altKey ? 7500 : 750);
+
+  t.selectAll("circle")
+      .attr("cx", function(d) { return x(d.x); })
+      .attr("cy", function(d) { return y(d.y); })
+      .attr("r", function(d) { return k * d.r; });
+
+  t.selectAll("text")
+      .attr("x", function(d) { return x(d.x); })
+      .attr("y", function(d) { return y(d.y); })
+      .style("opacity", function(d) { return k * d.r > 20 ? 1 : 0; });
+
+  node = d;
+  d3.event.stopPropagation();
+}
+
+
+function xmlToJSON2(xml) {
+  //console.log(xml.tagName)
+  //console.log(xml.attributes)
+    var o = {"tagName": xml.tagName};
+    if(xml.attributes) {
+        o.attributes = [];
+
+        
+        Array.prototype.forEach.call(xml.attributes, 
+              function(a){
+                  //console.log(a.name, a.value)
+                  o.attributes[a.name] = a.value;
+              }); //treat the attributes node list as an array
+                  //and add each attribute to the object 
+    }
+    if (xml.textContent&&xml.textContent.length) {
+        o["textContent"] = xml.textContent.trim();
+        //console.log(xml.textContent)
+    }
+    if (xml.children.length) {        
+        o.children = Array.prototype.map.call(xml.children,
+                    function(child) {
+                        return xmlToJSON2(child);
+                    });
+                //console.log(xml.children)
+                //replace each xml object in the child array
+                //with its JSON-ified version
+    }
+    
+    return o;
+}
+
+
+function showinstructor(){
+    canvas.selectAll("*").remove();
+        var root = {};
+    var root2 = {"children":[],"value":100};
+    var temp =0;
+    var namelistt=[];
+    for (var i=0;i<courseName.length;i++ ) {
+
+        if ((Instructor[i] in root)==false){ 
+            namelistt.push(Instructor[i]);        
+            root[Instructor[i]]=[];
+            temp=temp+1;
+        }
+
+        root[Instructor[i]].push(courseName[i]);
+    }
+
+
+    for (var i=0; i<namelistt.length;i++){
+      var temp2={};
+      temp2["name"]=namelistt[i];
+      temp2["value"]=50;
+      temp2["children"]=[];
+        for (var j=0;j< root[namelistt[i]].length;j++) {
+          temp2["children"].push({"name":root[namelistt[i]][j],"value":25});
+        }
+      root2.children.push(temp2);
+    }
+
+    var data = root2;
+
+          var nodes = pack.nodes(data);
+
+          var node = canvas.selectAll(".node")
+              .data(nodes)
+              .enter()
+              .append("g")
+
+
+
+
+          node.append("svg:circle")
+              .attr("class", function(d) { return d.children ? "parent" : "child"; })
+              .attr("cx", function(d) { return d.x; })
+              .attr("cy", function(d) { return d.y; })
+              .attr("r",function (d) { return d.r ;})
+              // .attr("fill",function (d) {  return d.children ? "#000" : "steelblue";})
+              .attr("opacity",0.25)
+              // .attr("stroke",function (d) { return d.children ? "#000" : "#ADADAD";})
+              .attr("stroke-width",2)
+              .on("click", function(d) { return zoom(data == d ? data : d); });
+
+          node.append("svg:text")
+              .attr("class", function(d) { return d.children ? "parent" : "child"; })
+              .attr("x", function(d) { return d.x; })
+              .attr("y", function(d) { return d.y; })
+              .attr("dy", ".35em")
+              .text(function (d) { return d.name;})
+              .style("opacity", function(d) { return d.r > 30 ? 1 : 0; })
+              .attr("text-anchor", "middle")
+              .style("font-size", function(d){return d.children? "15px":"11px";});
+              // .attr("fill",function (d) { return d.children ?  "steelblue" : "#000";});
+
+
+
+            
+            d3.select(canvas).on("click", function() { zoom(data); });
+
+      // }) //fake read jason
+
+
+}
+function showsubject(){
+    canvas.selectAll("*").remove();
+        var root = {};
+    var root2 = {"children":[],"value":100};
+    var temp =0;
+    var namelistt=[];
+    for (var i=0;i<courseName.length;i++ ) {
+
+        if ((subject[i] in root)==false){ 
+            namelistt.push(subject[i]);        
+            root[subject[i]]=[];
+            temp=temp+1;
+        }
+
+        root[subject[i]].push(courseName[i]);
+    }
+
+
+    for (var i=0; i<namelistt.length;i++){
+      var temp2={};
+      temp2["name"]=namelistt[i];
+      temp2["value"]=50;
+      temp2["children"]=[];
+        for (var j=0;j< root[namelistt[i]].length;j++) {
+          temp2["children"].push({"name":root[namelistt[i]][j],"value":25});
+        }
+      root2.children.push(temp2);
+    }
+    var data = root2;
+
+          var nodes = pack.nodes(data);
+
+          var node = canvas.selectAll(".node")
+              .data(nodes)
+              .enter()
+              .append("g")
+
+
+
+
+          node.append("svg:circle")
+              .attr("class", function(d) { return d.children ? "parent" : "child"; })
+              .attr("cx", function(d) { return d.x; })
+              .attr("cy", function(d) { return d.y; })
+              .attr("r",function (d) { return d.r ;})
+              // .attr("fill",function (d) {  return d.children ? "#000" : "steelblue";})
+              .attr("opacity",0.25)
+              // .attr("stroke",function (d) { return d.children ? "#000" : "#ADADAD";})
+              .attr("stroke-width",2)
+              .on("click", function(d) { return zoom(data == d ? data : d); });
+
+          node.append("svg:text")
+              .attr("class", function(d) { return d.children ? "parent" : "child"; })
+              .attr("x", function(d) { return d.x; })
+              .attr("y", function(d) { return d.y; })
+              .attr("dy", ".35em")
+              .text(function (d) { return d.name;})
+              .style("opacity", function(d) { return d.r > 30 ? 1 : 0; })
+              .attr("text-anchor", "middle")
+              .style("font-size", function(d){return d.children? "15px":"11px";});
+              // .attr("fill",function (d) { return d.children ?  "steelblue" : "#000";});
+
+
+
+            
+            d3.select(canvas).on("click", function() { zoom(data); });
+
+      // }) //fake read jason
+
+}
+
+function showday(){
+    canvas.selectAll("*").remove();
+        var root = {};
+    var root2 = {"children":[],"value":100};
+    var temp =0;
+    var namelistt=[];
+    for (var i=0;i<courseName.length;i++ ) {
+
+        if ((day[i] in root)==false){ 
+            namelistt.push(day[i]);        
+            root[day[i]]=[];
+            temp=temp+1;
+        }
+
+        root[day[i]].push(courseName[i]);
+    }
+
+
+    for (var i=0; i<namelistt.length;i++){
+      var temp2={};
+      temp2["name"]=namelistt[i];
+      temp2["value"]=50;
+      temp2["children"]=[];
+        for (var j=0;j< root[namelistt[i]].length;j++) {
+          temp2["children"].push({"name":root[namelistt[i]][j],"value":25});
+        }
+      root2.children.push(temp2);
+    }
+
+    var data = root2;
+
+          var nodes = pack.nodes(data);
+
+          var node = canvas.selectAll(".node")
+              .data(nodes)
+              .enter()
+              .append("g")
+
+
+
+
+          node.append("svg:circle")
+              .attr("class", function(d) { return d.children ? "parent" : "child"; })
+              .attr("cx", function(d) { return d.x; })
+              .attr("cy", function(d) { return d.y; })
+              .attr("r",function (d) { return d.r ;})
+              // .attr("fill",function (d) {  return d.children ? "#000" : "steelblue";})
+              .attr("opacity",0.25)
+              // .attr("stroke",function (d) { return d.children ? "#000" : "#ADADAD";})
+              .attr("stroke-width",2)
+              .on("click", function(d) { return zoom(data == d ? data : d); });
+
+          node.append("svg:text")
+              .attr("class", function(d) { return d.children ? "parent" : "child"; })
+              .attr("x", function(d) { return d.x; })
+              .attr("y", function(d) { return d.y; })
+              .attr("dy", ".35em")
+              .text(function (d) { return d.name;})
+              .style("opacity", function(d) { return d.r > 30 ? 1 : 0; })
+              .attr("text-anchor", "middle")
+              .style("font-size", function(d){return d.children? "15px":"11px";});
+              // .attr("fill",function (d) { return d.children ?  "steelblue" : "#000";});
+
+
+
+            
+            d3.select(canvas).on("click", function() { zoom(data); });
+
+      // }) //fake read jason
+
+
+}
+
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>  
+<meta http-equiv="content-type" content="text/html" charset="utf-8">
+<html>  
+  <head> 
+      <title>XML-Visualization.html</title>  
+      <script type="text/javascript" src=JS/d3.min.js></script>  
+  </head>
+  <body>
+    <script>
+///////////////////////////////////
+
+var dataset;
+
+d3.xml("reed.xml", 
+       function(error, data) {
+
+  var startTimes = []; 
+  //var StartTimes = [];  //timeformat
+
+  if (error) { return console.warn(error); }
+      //console.log(data);
+
+  dataset = xmlToJSON2(data); 
+      //console.log(dataset.children[0])
+
+  dataset.children[0].children.forEach(function(course){      //children[0] is root
+    if (typeof(course.children[8].children[0].textContent) !== "undefined"){ 
+        var Hour = course.children[8].children[0].textContent.substring(0,2);
+        var Min  = course.children[8].children[0].textContent.substring(3,5);
+        var Mark  = course.children[8].children[0].textContent.substring(5,7);
+
+        if(Mark==="PM"){
+          Hour=parseInt(Hour)+12;
+        }
+
+        startTimes.push(parseInt(Hour)+parseInt(Min)/60);
+
+        //var timeformat = d3.time.format("%H-%M");
+        //StartTimes = timeformat.parse("startTimes");
+
+        //console.log(startTimes)
+        //console.log(StartTimes)
+    }    
+  });   //end of loop for searching startTime
+
+///////////////////
+      var width=1440,
+          height=800,
+          padding=50;
+
+    	//d3.csv("master-simpledistance.csv", function(error, data){
+
+    		//var map = data.map(function (i) { return parseInt(i.DD);})
+        var map = startTimes;
+        console.log(map);
+
+    		var histogram = d3.layout.histogram()
+    			.bins(24)
+    			(map)
+
+        var color=d3.scale.category10();
+
+        var Ty = d3.scale.linear()
+            .domain([0,d3.max(histogram.map(function (i){ return i.length; }))])
+            .range([0,height]);
+
+        var Tx = d3.scale.linear()
+            .domain([0,24])//.domain([0,d3.max(map)])
+            .range([0,width]);
+
+        var xAxis = d3.svg.axis()
+            .scale(Tx)
+            .orient("bottom");
+
+    		var canvas = d3.select("body").append("svg")
+    			.attr("width",width)
+    			.attr("height",height+padding)
+          .append("g")
+              .attr("transform","translate(20,0)");
+
+        var group = canvas.append("g")
+            .attr("transform","translate(0,"+ height +")")
+            .call(xAxis);
+
+    		var bars = canvas.selectAll(".bar")
+    			.data(histogram)
+    			.enter()
+    			.append("g");
+
+    		bars.append("rect")
+    			.attr("x",function (d) { return Tx(d.x);})
+    			.attr("y",function (d) { return height-Ty(d.y);})
+    			.attr("width", function (d) { return Tx(d.dx);})
+    			.attr("height", function (d) { return Ty(d.y);})
+          .attr("fill", function(d) { return color(Tx(d.x));})
+
+        bars.append("text")
+          .attr("x",function (d) { return Tx(d.x);})
+          .attr("y",function (d) { return height-Ty(d.y);})
+          .attr("dy", "20px")
+          .attr("dx", function (d) { return Tx(d.dx)/2;})
+          .attr("fill","#fff")
+          .attr("text-anchor","middle")
+          .text(function (d) {return d.y;})
+
+}) //end of xml reading
+
+function xmlToJSON2(xml) {
+  //console.log(xml.tagName)
+  //console.log(xml.attributes)
+    var o = {"tagName": xml.tagName};
+    if(xml.attributes) {
+        o.attributes = [];
+
+        
+        Array.prototype.forEach.call(xml.attributes, 
+              function(a){
+                  //console.log(a.name, a.value)
+                  o.attributes[a.name] = a.value;
+              }); //treat the attributes node list as an array
+                  //and add each attribute to the object 
+    }
+    if (xml.textContent&&xml.textContent.length) {
+        o["textContent"] = xml.textContent.trim();
+        //console.log(xml.textContent)
+    }
+    if (xml.children.length) {        
+        o.children = Array.prototype.map.call(xml.children,
+                    function(child) {
+                        return xmlToJSON2(child);
+                    });
+                //console.log(xml.children)
+                //replace each xml object in the child array
+                //with its JSON-ified version
+    }
+    
+    return o;
+}
+    </script>
+  </body>
+</html>
